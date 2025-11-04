@@ -10,11 +10,13 @@ from typing import Optional, Tuple
 from datetime import date
 from getpass import getpass
 from urllib import parse
+from configparser import ConfigParser, NoSectionError, NoOptionError
 
 import requests
 
 from SecuritySm import get_d_id
 
+config_file = 'config.ini'
 token_save_name = 'TOKEN.txt'
 app_code = '4ca99fa6b56cc2ba'
 token_env = os.environ.get('TOKEN')
@@ -354,6 +356,8 @@ def input_for_token():
 def start():
     token = init_token()
     all_logs = []  # 新增：汇总所有账号/角色的输出
+    config = ConfigParser()
+    file_read = config.read(config_file, encoding='utf-8')
 
     for i in token:
         try:
@@ -383,6 +387,39 @@ def start():
         print("[SC3] 推送成功" if ok else "[SC3] 推送失败", resp)
     else:
         print("[SC3] 跳过推送：未设置环境变量 SC3_SENDKEY")
+
+    Qmsg_sendkey = os.environ.get('QMSG_SENDKEY', '').strip()
+    #本地测试环境方便调试，优先使用配置文件
+    # if not Qmsg_sendkey:
+    #     if file_read:
+    #         try:
+    #             Qmsg_sendkey = config.get('DEFAULT', 'Qmsg_sendkey', fallback='').# strip()
+    #         except (NoSectionError, NoOptionError):
+    #             Qmsg_sendkey = ''
+    #     else:
+    #         pass  # 配置文件不存在，跳过读取
+
+    if Qmsg_sendkey:
+        title = f'森空岛自动签到结果 - {date.today().strftime("%Y-%m-%d")}'
+        desp = '\n'.join(all_logs) if all_logs else '今日无可用账号或无输出'
+        api = f'https://qmsg.zendee.cn/jsend/{Qmsg_sendkey}'
+        payload = {
+            "msg": f"{title}\n{desp}",
+            "qq": "",  # 指定QQ/QQ群
+            "bot": "", # 指定bot
+        }
+        print(f"{title}\n{desp}")  # 本地打印推送内容
+        try:
+            r = requests.post(api, json=payload, timeout=10)
+            if r.status_code == 200:
+                print("[Qmsg] 推送成功", r.text)
+            else:
+                print("[Qmsg] 推送失败", r.text)
+        except Exception as e:
+            print(f"[Qmsg] 推送异常: {e!r}")
+    else:
+        print("[Qmsg] 跳过推送：未设置环境变量 QMSG_SENDKEY")
+
 
 
 if __name__ == '__main__':
