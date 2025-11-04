@@ -298,6 +298,8 @@ def do_sign(cred):
                 print("[PushPlus] 推送失败", r.text)
         except Exception as e:
             print(f"[PushPlus] 推送异常: {e!r}")
+    else: 
+        print("[PushPlus] 跳过推送：未设置环境变量 PUSHPLUS_KEY")
 
     return logs_out
 
