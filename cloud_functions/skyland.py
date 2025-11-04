@@ -178,7 +178,9 @@ def get_binding_list(cred):
 def do_sign(cred):
     characters = get_binding_list(cred)
     logs_out = []
-
+    config = ConfigParser()
+    file_read = config.read(config_file, encoding='utf-8')
+    
     for i in characters:
         body = {
             'uid': i.get('uid'),
@@ -219,27 +221,35 @@ def do_sign(cred):
     else:
         print("[SC3] 跳过推送：未设置环境变量 SC3_SENDKEY")
 
-    Qmsg_sendkey = os.environ.get('QMSG_SENDKEY', '').strip()
-    #本地测试环境方便调试，优先使用配置文件
-    # if not Qmsg_sendkey:
-    #     if file_read:
-    #         try:
-    #             Qmsg_sendkey = config.get('DEFAULT', 'Qmsg_sendkey', fallback='').# strip()
-    #         except (NoSectionError, NoOptionError):
-    #             Qmsg_sendkey = ''
-    #     else:
-    #         pass  # 配置文件不存在，跳过读取
+    # === Qmsg 推送（可选，通过环境变量控制） ===
+    # 在本地或云函数环境设置：
+    #   QMSG_KEY: 必填
+    # 若不设，则尝试从配置文件读取
+    # 配置文件格式参考 config.ini
+    #   [DEFAULT]
+    #   QMSG_KEY=your_key_here
+    # 若仍未设，则跳过推送
+    QMSG_KEY = os.environ.get('QMSG_KEY', '').strip()
+    #云函数环境可使用配置文件
+    if not QMSG_KEY:
+        if file_read:
+            try:
+                QMSG_KEY = config.get('DEFAULT', 'QMSG_KEY',allback='').strip() # type: ignore
+            except (NoSectionError, NoOptionError):
+                QMSG_KEY = ''
+        else:
+            pass  # 配置文件不存在，跳过读取
 
-    if Qmsg_sendkey:
+    if QMSG_KEY:
         title = f'森空岛自动签到结果 - {date.today().strftime("%Y-%m-%d")}'
         desp = '\n'.join(all_logs) if all_logs else '今日无可用账号或无输出'
-        api = f'https://qmsg.zendee.cn/jsend/{Qmsg_sendkey}'
+        api = f'https://qmsg.zendee.cn/jsend/{QMSG_KEY}'
         payload = {
             "msg": f"{title}\n{desp}",
             "qq": "",  # 指定QQ/QQ群
             "bot": "", # 指定bot
         }
-        print(f"{title}\n{desp}")  # 本地打印推送内容
+        #print(f"{title}\n{desp}")  # 本地打印推送内容
         try:
             r = requests.post(api, json=payload, timeout=10)
             if r.status_code == 200:
@@ -249,8 +259,45 @@ def do_sign(cred):
         except Exception as e:
             print(f"[Qmsg] 推送异常: {e!r}")
     else:
-        print("[Qmsg] 跳过推送：未设置环境变量 QMSG_SENDKEY")
+        print("[Qmsg] 跳过推送：未设置环境变量 QMSG_KEY")
 
+    # === PushPlus 推送（可选，通过环境变量控制） ===
+    # 在本地或云函数环境设置：
+    #   PUSHPLUS_KEY: 必填
+    # 若不设，则尝试从配置文件读取
+    # 配置文件格式参考 config.ini
+    #   [DEFAULT]
+    #   PUSHPLUS_KEY=your_key_here
+    # 若仍未设，则跳过推送
+    PUSHPLUS_KEY = os.environ.get('PUSHPLUS_KEY', '').strip()
+    if not PUSHPLUS_KEY:
+        if file_read:
+            try:
+                PUSHPLUS_KEY = config.get('DEFAULT', 'PUSHPLUS_KEY', fallback='').strip() # type: ignore
+            except (NoSectionError, NoOptionError):
+                PUSHPLUS_KEY = ''
+        else:
+            pass  # 配置文件不存在，跳过读取
+    if PUSHPLUS_KEY := os.environ.get('PUSHPLUS_KEY', '').strip():
+        title = f'森空岛自动签到结果 - {date.today().strftime("%Y-%m-%d")}'
+        content = '\n'.join(all_logs) if all_logs else '今日无可用账号或无输出'
+        api = 'http://www.pushplus.plus/send'
+        payload = {
+            "token": PUSHPLUS_KEY,
+            "title": title,
+            "content": content,
+            "topic": "",  # 指定topic
+            "template": "HTML"
+        }
+        #print(f"{title}\n{content}")  # 本地打印推送内容
+        try:
+            r = requests.post(api, json=payload, timeout=10)
+            if r.status_code == 200:
+                print("[PushPlus] 推送成功", r.text)
+            else:
+                print("[PushPlus] 推送失败", r.text)
+        except Exception as e:
+            print(f"[PushPlus] 推送异常: {e!r}")
 
     return logs_out
 

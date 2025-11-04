@@ -388,21 +388,21 @@ def start():
     else:
         print("[SC3] 跳过推送：未设置环境变量 SC3_SENDKEY")
 
-    Qmsg_sendkey = os.environ.get('QMSG_SENDKEY', '').strip()
+    QMSG_KEY = os.environ.get('QMSG_KEY', '').strip()
     #本地测试环境方便调试，优先使用配置文件
-    # if not Qmsg_sendkey:
+    # if not QMSG_KEY:
     #     if file_read:
     #         try:
-    #             Qmsg_sendkey = config.get('DEFAULT', 'Qmsg_sendkey', fallback='').# strip()
+    #             QMSG_KEY = config.get('DEFAULT', 'QMSG_KEY', fallback='').# strip()
     #         except (NoSectionError, NoOptionError):
-    #             Qmsg_sendkey = ''
+    #             QMSG_KEY = ''
     #     else:
     #         pass  # 配置文件不存在，跳过读取
 
-    if Qmsg_sendkey:
+    if QMSG_KEY:
         title = f'森空岛自动签到结果 - {date.today().strftime("%Y-%m-%d")}'
         desp = '\n'.join(all_logs) if all_logs else '今日无可用账号或无输出'
-        api = f'https://qmsg.zendee.cn/jsend/{Qmsg_sendkey}'
+        api = f'https://qmsg.zendee.cn/jsend/{QMSG_KEY}'
         payload = {
             "msg": f"{title}\n{desp}",
             "qq": "",  # 指定QQ/QQ群
@@ -418,7 +418,38 @@ def start():
         except Exception as e:
             print(f"[Qmsg] 推送异常: {e!r}")
     else:
-        print("[Qmsg] 跳过推送：未设置环境变量 QMSG_SENDKEY")
+        print("[Qmsg] 跳过推送：未设置环境变量 QMSG_KEY")
+
+    PUSHPLUS_KEY = os.environ.get('PUSHPLUS_KEY', '').strip()
+    if not PUSHPLUS_KEY:
+        if file_read:
+            try:
+                PUSHPLUS_KEY = config.get('DEFAULT', 'PUSHPLUS_KEY', fallback='').strip()
+            except (NoSectionError, NoOptionError):
+                PUSHPLUS_KEY = ''
+        else:
+            pass  # 配置文件不存在，跳过读取
+
+    if PUSHPLUS_KEY := os.environ.get('PUSHPLUS_KEY', '').strip():
+        title = f'森空岛自动签到结果 - {date.today().strftime("%Y-%m-%d")}'
+        content = '\n'.join(all_logs) if all_logs else '今日无可用账号或无输出'
+        api = 'http://www.pushplus.plus/send'
+        payload = {
+            "token": PUSHPLUS_KEY,
+            "title": title,
+            "content": content,
+            "topic": "",  # 指定topic
+            "template": "HTML"
+        }
+        try:
+            r = requests.post(api, json=payload, timeout=10)
+            resp = r.json()
+            if resp.get('code') == 200:
+                print("[PushPlus] 推送成功", resp)
+            else:
+                print("[PushPlus] 推送失败", resp)
+        except Exception as e:
+            print(f"[PushPlus] 推送异常: {e!r}")
 
 
 
