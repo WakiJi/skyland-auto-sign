@@ -199,7 +199,6 @@ def do_sign(cred):
                 f'角色{i.get("nickName")}({i.get("channelName")})签到成功，获得了{res["name"]}×{res.get("count") or 1}'
             )
             msg = f'角色{i.get("nickName")}({i.get("channelName")})签到成功，获得了{res["name"]}×{res.get("count") or 1}'
-            print(msg)
             logs_out.append(msg)
             print("签到完成！")
 

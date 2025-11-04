@@ -408,7 +408,7 @@ def start():
             "qq": "",  # 指定QQ/QQ群
             "bot": "", # 指定bot
         }
-        print(f"{title}\n{desp}")  # 本地打印推送内容
+        #print(f"{title}\n{desp}")  # 本地打印推送内容
         try:
             r = requests.post(api, json=payload, timeout=10)
             if r.status_code == 200:
