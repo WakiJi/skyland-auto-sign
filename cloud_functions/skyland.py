@@ -45,8 +45,29 @@ cred_code_url = "https://zonai.skland.com/api/v1/user/auth/generate_cred_by_code
 grant_code_url = "https://as.hypergryph.com/user/oauth2/v2/grant"
 
 app_code = '4ca99fa6b56cc2ba'
-config_file = 'config.ini'
-all_logs = []
+config_file = f'{os.path.dirname(__file__)}/config.ini'
+CONFIG_SECTION = 'SKYLAND'
+secrets_to_check = [
+    'SC3_SENDKEY',
+    'SC3_UID',
+    'QMSG_KEY',
+    'PUSHPLUS_KEY',
+]
+config = ConfigParser()
+file_read = config.read(config_file, encoding='utf-8')
+CONFIG_SECTRETS = {}
+for secret in secrets_to_check:
+    secret_value = ''
+    secret_value = os.environ.get(secret, '').strip()
+    if not os.environ.get(secret):
+        if file_read:
+            try:
+                secret_value = config.get(CONFIG_SECTION, secret, fallback='').strip()
+            except (NoSectionError, NoOptionError):
+                pass
+            except Exception as e:
+                logging.error(f'读取配置文件时发生错误: {e!r}')
+    CONFIG_SECTRETS[secret] = secret_value
 
 sign_token = threading.local()
 
@@ -177,7 +198,7 @@ def get_binding_list(cred):
 
 def do_sign(cred):
     characters = get_binding_list(cred)
-    logs_out = []
+    all_logs = []
     config = ConfigParser()
     file_read = config.read(config_file, encoding='utf-8')
     
@@ -192,7 +213,7 @@ def do_sign(cred):
             logging.error(f'角色{i.get("nickName")}({i.get("channelName")})签到失败了！原因：{resp.get("message")}')
             msg = f'角色{i.get("nickName")}({i.get("channelName")})签到失败了！原因：{resp.get("message")}'
             print(msg)
-            logs_out.append(msg)
+            all_logs.append(msg)
             continue
         awards = resp['data']['awards']
         for j in awards:
@@ -201,15 +222,15 @@ def do_sign(cred):
                 f'角色{i.get("nickName")}({i.get("channelName")})签到成功，获得了{res["name"]}×{res.get("count") or 1}'
             )
             msg = f'角色{i.get("nickName")}({i.get("channelName")})签到成功，获得了{res["name"]}×{res.get("count") or 1}'
-            logs_out.append(msg)
+            all_logs.append(msg)
             print("签到完成！")
 
     # === Server酱³ 推送（可选，通过环境变量控制） ===
     # 在本地或 GitHub Actions 设置：
     #   SC3_SENDKEY: 必填
     #   SC3_UID: 可选（若不设，将自动从 sendkey 中提取）
-    sc3_sendkey = os.environ.get('SC3_SENDKEY', '').strip()
-    sc3_uid     = os.environ.get('SC3_UID', '').strip() or None
+    sc3_sendkey = CONFIG_SECTRETS.get('SC3_SENDKEY')
+    sc3_uid     = CONFIG_SECTRETS.get('SC3_UID') or None
 
     if sc3_sendkey:
         # 标题带日期；正文多行
@@ -229,17 +250,9 @@ def do_sign(cred):
     #   [DEFAULT]
     #   QMSG_KEY=your_key_here
     # 若仍未设，则跳过推送
-    QMSG_KEY = os.environ.get('QMSG_KEY', '').strip()
-    #云函数环境可使用配置文件
-    if not QMSG_KEY:
-        if file_read:
-            try:
-                QMSG_KEY = config.get('DEFAULT', 'QMSG_KEY',allback='').strip() # type: ignore
-            except (NoSectionError, NoOptionError):
-                QMSG_KEY = ''
-        else:
-            pass  # 配置文件不存在，跳过读取
 
+    QMSG_KEY = CONFIG_SECTRETS.get('QMSG_KEY')
+    #云函数环境可使用配置文件
     if QMSG_KEY:
         title = f'森空岛自动签到结果 - {date.today().strftime("%Y-%m-%d")}'
         desp = '\n'.join(all_logs) if all_logs else '今日无可用账号或无输出'
@@ -269,16 +282,8 @@ def do_sign(cred):
     #   [DEFAULT]
     #   PUSHPLUS_KEY=your_key_here
     # 若仍未设，则跳过推送
-    PUSHPLUS_KEY = os.environ.get('PUSHPLUS_KEY', '').strip()
-    if not PUSHPLUS_KEY:
-        if file_read:
-            try:
-                PUSHPLUS_KEY = config.get('DEFAULT', 'PUSHPLUS_KEY', fallback='').strip() # type: ignore
-            except (NoSectionError, NoOptionError):
-                PUSHPLUS_KEY = ''
-        else:
-            pass  # 配置文件不存在，跳过读取
-    if PUSHPLUS_KEY := os.environ.get('PUSHPLUS_KEY', '').strip():
+    PUSHPLUS_KEY = CONFIG_SECTRETS.get('PUSHPLUS_KEY')
+    if PUSHPLUS_KEY :
         title = f'森空岛自动签到结果 - {date.today().strftime("%Y-%m-%d")}'
         content = '\n'.join(all_logs) if all_logs else '今日无可用账号或无输出'
         api = 'http://www.pushplus.plus/send'
@@ -287,7 +292,7 @@ def do_sign(cred):
             "title": title,
             "content": content,
             "topic": "",  # 指定topic
-            "template": "HTML"
+            "template": "html"
         }
         #print(f"{title}\n{content}")  # 本地打印推送内容
         try:
@@ -300,6 +305,4 @@ def do_sign(cred):
             print(f"[PushPlus] 推送异常: {e!r}")
     else: 
         print("[PushPlus] 跳过推送：未设置环境变量 PUSHPLUS_KEY")
-
-    return logs_out
-
+    return

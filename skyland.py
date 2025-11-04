@@ -22,6 +22,28 @@ app_code = '4ca99fa6b56cc2ba'
 token_env = os.environ.get('TOKEN')
 # 现在想做什么？
 current_type = os.environ.get('SKYLAND_TYPE')
+CONFIG_SECTION = 'SKYLAND'
+secrets_to_check = [
+    'SC3_SENDKEY',
+    'SC3_UID',
+    'QMSG_KEY',
+    'PUSHPLUS_KEY',
+]
+config = ConfigParser()
+file_read = config.read(config_file, encoding='utf-8')
+CONFIG_SECTRETS = {}
+for secret in secrets_to_check:
+    secret_value = ''
+    secret_value = os.environ.get(secret, '').strip()
+    if not os.environ.get(secret):
+        if file_read:
+            try:
+                secret_value = config.get(CONFIG_SECTION, secret, fallback='').strip()
+            except (NoSectionError, NoOptionError):
+                pass
+            except Exception as e:
+                logging.error(f'读取配置文件时发生错误: {e!r}')
+    CONFIG_SECTRETS[secret] = secret_value
 
 http_local = threading.local()
 header = {
@@ -388,7 +410,6 @@ def start():
     else:
         print("[SC3] 跳过推送：未设置环境变量 SC3_SENDKEY")
 
-    QMSG_KEY = os.environ.get('QMSG_KEY', '').strip()
     #本地测试环境方便调试，优先使用配置文件
     # if not QMSG_KEY:
     #     if file_read:
@@ -399,6 +420,7 @@ def start():
     #     else:
     #         pass  # 配置文件不存在，跳过读取
 
+    QMSG_KEY = CONFIG_SECTRETS.get('QMSG_KEY', '')
     if QMSG_KEY:
         title = f'森空岛自动签到结果 - {date.today().strftime("%Y-%m-%d")}'
         desp = '\n'.join(all_logs) if all_logs else '今日无可用账号或无输出'
@@ -420,17 +442,8 @@ def start():
     else:
         print("[Qmsg] 跳过推送：未设置环境变量 QMSG_KEY")
 
-    PUSHPLUS_KEY = os.environ.get('PUSHPLUS_KEY', '').strip()
-    if not PUSHPLUS_KEY:
-        if file_read:
-            try:
-                PUSHPLUS_KEY = config.get('DEFAULT', 'PUSHPLUS_KEY', fallback='').strip()
-            except (NoSectionError, NoOptionError):
-                PUSHPLUS_KEY = ''
-        else:
-            pass  # 配置文件不存在，跳过读取
-
-    if PUSHPLUS_KEY := os.environ.get('PUSHPLUS_KEY', '').strip():
+    PUSHPLUS_KEY = CONFIG_SECTRETS.get('PUSHPLUS_KEY', '')
+    if PUSHPLUS_KEY :
         title = f'森空岛自动签到结果 - {date.today().strftime("%Y-%m-%d")}'
         content = '\n'.join(all_logs) if all_logs else '今日无可用账号或无输出'
         api = 'http://www.pushplus.plus/send'
@@ -439,7 +452,7 @@ def start():
             "title": title,
             "content": content,
             "topic": "",  # 指定topic
-            "template": "HTML"
+            "template": "html"
         }
         try:
             r = requests.post(api, json=payload, timeout=10)
