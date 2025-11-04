@@ -4,5 +4,4 @@ skyland.spec
 logs
 .idea
 TOKEN.txt
-config.ini
 __pycache__/
