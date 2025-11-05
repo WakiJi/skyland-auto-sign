@@ -134,7 +134,7 @@ def push_serverchan3(sendkey: str, title: str, desp: str = "",
     """
     推送到 Server酱³
     - sendkey: 你的 SendKey（形如 sctp123456tXXXX...）
-    - uid: 可选；不填则自动从 sendkey 提取（正则 ^SCT(\d+)T）
+    - uid: 可选；不填则自动从 sendkey 提取（正则 ^sctp(\d+)t）
     - title/desp: 标题与正文（desp 支持 Markdown）
     - tags/short: 可选
     返回: (是否成功, 返回文本)
@@ -144,17 +144,15 @@ def push_serverchan3(sendkey: str, title: str, desp: str = "",
     if not sendkey:
         return False, "sendkey is empty"
 
-    #if uid is None or uid == '':
-    #    m = re.match(r"^SCT(\d+)T", sendkey)
-    #    print(f"[SC3] 从 sendkey 中提取 uid，结果: {m.group(1) if m else '未提取到'}")
-    #    if not m:
-    #        return False, "cannot extract uid from sendkey; please pass uid explicitly"
-    #    uid = m.group(1)
+    if uid is None or uid == '':
+        m = re.match(r"^sctp(\d+)t", sendkey)
+        print(f"[SC3] 从 sendkey 中提取 uid，结果: {m.group(1) if m else '未提取到'}")
+        if not m:
+            return False, "cannot extract uid from sendkey; please pass uid explicitly"
+        uid = m.group(1)
     if uid:
         uid = uid.strip()
         api = f"https://{uid}.push.ft07.com/send/{sendkey}.send"
-    if uid is None or uid == '':
-        api = f"https://sctapi.ftqq.com/send/{sendkey}.send"
     
     print(f"[SC3] 推送接口: {api}")
     payload = {
