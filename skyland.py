@@ -397,8 +397,8 @@ def start():
     # 在本地或 GitHub Actions 设置：
     #   SC3_SENDKEY: 必填
     #   SC3_UID: 可选（若不设，将自动从 sendkey 中提取）
-    sc3_sendkey = os.environ.get('SC3_SENDKEY', '').strip()
-    sc3_uid     = os.environ.get('SC3_UID', '').strip() or None
+    sc3_sendkey = CONFIG_SECTRETS.get('SC3_SENDKEY', '')
+    sc3_uid = CONFIG_SECTRETS.get('SC3_UID', '')
 
     if sc3_sendkey:
         # 标题带日期；正文多行
