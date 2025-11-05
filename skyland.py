@@ -134,21 +134,29 @@ def push_serverchan3(sendkey: str, title: str, desp: str = "",
     """
     推送到 Server酱³
     - sendkey: 你的 SendKey（形如 sctp123456tXXXX...）
-    - uid: 可选；不填则自动从 sendkey 提取（正则 ^sctp(\\d+)t）
+    - uid: 可选；不填则自动从 sendkey 提取（正则 ^SCT(\d+)T）
     - title/desp: 标题与正文（desp 支持 Markdown）
     - tags/short: 可选
     返回: (是否成功, 返回文本)
     """
+    sendkey = CONFIG_SECTRETS.get('SC3_SENDKEY', '')
+    sendkey = sendkey.strip()
     if not sendkey:
         return False, "sendkey is empty"
 
-    if uid is None:
-        m = re.match(r"^sctp(\d+)t", sendkey)
-        if not m:
-            return False, "cannot extract uid from sendkey; please pass uid explicitly"
-        uid = m.group(1)
-
-    api = f"https://{uid}.push.ft07.com/send/{sendkey}.send"
+    #if uid is None or uid == '':
+    #    m = re.match(r"^SCT(\d+)T", sendkey)
+    #    print(f"[SC3] 从 sendkey 中提取 uid，结果: {m.group(1) if m else '未提取到'}")
+    #    if not m:
+    #        return False, "cannot extract uid from sendkey; please pass uid explicitly"
+    #    uid = m.group(1)
+    if uid:
+        uid = uid.strip()
+        api = f"https://{uid}.push.ft07.com/send/{sendkey}.send"
+    if uid is None or uid == '':
+        api = f"https://sctapi.ftqq.com/send/{sendkey}.send"
+    
+    print(f"[SC3] 推送接口: {api}")
     payload = {
         "title": title or "通知",
         "desp": desp or "",
@@ -159,7 +167,7 @@ def push_serverchan3(sendkey: str, title: str, desp: str = "",
         payload["short"] = short
 
     try:
-        r = requests.post(api, json=payload, timeout=timeout)
+        r = requests.post(api, json=payload, timeout=10)
         ok = (r.status_code == 200)
         return ok, r.text
     except Exception as e:
@@ -399,7 +407,6 @@ def start():
     #   SC3_UID: 可选（若不设，将自动从 sendkey 中提取）
     sc3_sendkey = CONFIG_SECTRETS.get('SC3_SENDKEY', '')
     sc3_uid = CONFIG_SECTRETS.get('SC3_UID', '')
-
     if sc3_sendkey:
         # 标题带日期；正文多行
         title = f'森空岛自动签到结果 - {date.today().strftime("%Y-%m-%d")}'
@@ -463,6 +470,8 @@ def start():
                 print("[PushPlus] 推送失败", resp)
         except Exception as e:
             print(f"[PushPlus] 推送异常: {e!r}")
+    else:
+        print("[PushPlus] 跳过推送：未设置环境变量 PUSHPLUS_KEY")
 
 
 
