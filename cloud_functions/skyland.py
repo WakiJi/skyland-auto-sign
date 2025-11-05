@@ -82,16 +82,23 @@ def push_serverchan3(sendkey: str, title: str, desp: str = "",
     - tags/short: 可选
     返回: (是否成功, 返回文本)
     """
+    sendkey = CONFIG_SECTRETS.get('SC3_SENDKEY', '')
+    sendkey = sendkey.strip()
     if not sendkey:
         return False, "sendkey is empty"
 
-    if uid is None:
-        m = re.match(r"^sctp(\d+)t", sendkey)
-        if not m:
-            return False, "cannot extract uid from sendkey; please pass uid explicitly"
-        uid = m.group(1)
-
-    api = f"https://{uid}.push.ft07.com/send/{sendkey}.send"
+    #if uid is None or uid == '':
+    #    m = re.match(r"^SCT(\d+)T", sendkey)
+    #    print(f"[SC3] 从 sendkey 中提取 uid，结果: {m.group(1) if m else '未提取到'}")
+    #    if not m:
+    #        return False, "cannot extract uid from sendkey; please pass uid explicitly"
+    #    uid = m.group(1)
+    if uid:
+        uid = uid.strip()
+        api = f"https://{uid}.push.ft07.com/send/{sendkey}.send"
+    if uid is None or uid == '':
+        api = f"https://sctapi.ftqq.com/send/{sendkey}.send"
+        
     payload = {
         "title": title or "通知",
         "desp": desp or "",
